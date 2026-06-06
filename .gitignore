@@ -10,3 +10,7 @@
 /fish/conf.d/
 
 .SRCINFO
+
+__pycache__/
+*.pyc
+*.bak
