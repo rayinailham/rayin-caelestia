@@ -15,16 +15,33 @@ CAELESTIA_WALLPAPER_STATE="$HOME/.local/state/caelestia/wallpaper/path.txt"
 LOCK_FILE="$HOME/.cache/caelestia/wallpaper.lock"
 # Transition tuning (all read natively by awww via these env vars).
 # DURATION is the main "speed" knob: bigger = slower/smoother.
-_transitions=(fade wave outer grow)
-: "${AWWW_TRANSITION:=${_transitions[RANDOM % ${#_transitions[@]}]}}"
+: "${AWWW_TRANSITION:=grow}"
 : "${AWWW_TRANSITION_STEP:=90}"
 : "${AWWW_TRANSITION_FPS:=60}"
 : "${AWWW_TRANSITION_DURATION:=1.5}"
-if [[ "$AWWW_TRANSITION" == "grow" ]]; then
-    : "${AWWW_TRANSITION_POS:=$(awk "BEGIN{srand(); printf \"%.2f,%.2f\", rand(), rand()}")}"
-    export AWWW_TRANSITION_POS
-fi
-export AWWW_TRANSITION AWWW_TRANSITION_STEP AWWW_TRANSITION_FPS AWWW_TRANSITION_DURATION
+_POS_STATE="$HOME/.cache/caelestia/grow_pos"
+_MIN_DIST=0.3
+_gen_pos() {
+    local last_x=0 last_y=0
+    if [ -f "$_POS_STATE" ]; then
+        IFS=',' read -r last_x last_y < "$_POS_STATE"
+    fi
+    awk -v lx="$last_x" -v ly="$last_y" -v min="$_MIN_DIST" '
+    BEGIN {
+        srand()
+        do {
+            x = rand()
+            y = rand()
+            dx = x - lx
+            dy = y - ly
+            dist = sqrt(dx*dx + dy*dy)
+        } while (dist < min)
+        printf "%.2f,%.2f", x, y
+    }'
+}
+: "${AWWW_TRANSITION_POS:=$(_gen_pos)}"
+printf '%s\n' "$AWWW_TRANSITION_POS" > "$_POS_STATE"
+export AWWW_TRANSITION AWWW_TRANSITION_STEP AWWW_TRANSITION_FPS AWWW_TRANSITION_DURATION AWWW_TRANSITION_POS
 
 # Serialize invocations: if a switch is already running (e.g. you spam the
 # keybind during a transition), drop this one instead of colliding on the
@@ -63,15 +80,43 @@ apply() {
     printf '%s\n' "$file" > "$STATE_FILE"
 }
 
+_COOLDOWN_FILE="$HOME/.cache/caelestia/wallpaper_cooldown"
+_COOLDOWN_TURNS=5
+
+_load_cooldowns() {
+    declare -gA _cooldowns=()
+    [ -f "$_COOLDOWN_FILE" ] || return 0
+    while IFS=$'\t' read -r count path; do
+        _cooldowns["$path"]="$count"
+    done < "$_COOLDOWN_FILE"
+}
+
+_tick_cooldowns() {
+    local -a to_remove=()
+    for path in "${!_cooldowns[@]}"; do
+        _cooldowns["$path"]=$(( ${_cooldowns["$path"]} - 1 ))
+        [ "${_cooldowns["$path"]}" -le 0 ] && to_remove+=("$path")
+    done
+    for path in "${to_remove[@]}"; do
+        unset '_cooldowns["$path"]'
+    done
+}
+
+_save_cooldowns() {
+    mkdir -p "$(dirname "$_COOLDOWN_FILE")"
+    : > "$_COOLDOWN_FILE"
+    for path in "${!_cooldowns[@]}"; do
+        printf '%s\t%s\n' "${_cooldowns["$path"]}" "$path" >> "$_COOLDOWN_FILE"
+    done
+}
+
 random_from() {
     local dir="$1"
     [ -d "$dir" ] || { err "Not a directory: $dir"; exit 1; }
 
-    # Currently displayed wallpaper (so we can avoid re-picking it).
-    local current=""
-    [ -s "$STATE_FILE" ] && current=$(cat "$STATE_FILE")
+    _load_cooldowns
+    _tick_cooldowns
 
-    # Collect all candidate images.
     local -a files=()
     while IFS= read -r -d '' f; do
         files+=("$f")
@@ -82,17 +127,18 @@ random_from() {
 
     [ "${#files[@]}" -gt 0 ] || { err "No images found in $dir"; exit 1; }
 
-    # Drop the current wallpaper from the pool (unless it's the only image),
-    # so a random switch always produces a visible change.
-    if [ -n "$current" ] && [ "${#files[@]}" -gt 1 ]; then
-        local -a filtered=()
-        for f in "${files[@]}"; do
-            [ "$f" = "$current" ] || filtered+=("$f")
-        done
-        files=("${filtered[@]}")
+    local -a eligible=()
+    for f in "${files[@]}"; do
+        [ -z "${_cooldowns["$f"]+x}" ] && eligible+=("$f")
+    done
+
+    if [ "${#eligible[@]}" -eq 0 ]; then
+        eligible=("${files[@]}")
     fi
 
-    local file="${files[RANDOM % ${#files[@]}]}"
+    local file="${eligible[RANDOM % ${#eligible[@]}]}"
+    _cooldowns["$file"]="$_COOLDOWN_TURNS"
+    _save_cooldowns
     apply "$file"
 }
 

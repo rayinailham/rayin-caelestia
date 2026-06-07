@@ -5,11 +5,33 @@ local function clean_key_combo(keys_str)
     if not keys_str then return "" end
     -- Replace commas with plus
     keys_str = keys_str:gsub(",", " + ")
+    
+    -- Preserve keysyms containing mod names from being capitalized
+    keys_str = keys_str:gsub("[Ss][Uu][Pp][Ee][Rr]_[Ll]", "__SUPER_L__")
+    keys_str = keys_str:gsub("[Ss][Uu][Pp][Ee][Rr]_[Rr]", "__SUPER_R__")
+    keys_str = keys_str:gsub("[Cc][Tt][Rr][Ll]_[Ll]", "__CTRL_L__")
+    keys_str = keys_str:gsub("[Cc][Tt][Rr][Ll]_[Rr]", "__CTRL_R__")
+    keys_str = keys_str:gsub("[Aa][Ll][Tt]_[Ll]", "__ALT_L__")
+    keys_str = keys_str:gsub("[Aa][Ll][Tt]_[Rr]", "__ALT_R__")
+    keys_str = keys_str:gsub("[Ss][Hh][Ii][Ff][Tt]_[Ll]", "__SHIFT_L__")
+    keys_str = keys_str:gsub("[Ss][Hh][Ii][Ff][Tt]_[Rr]", "__SHIFT_R__")
+
     -- Normalize modifiers to uppercase
     keys_str = keys_str:gsub("ctrl", "CTRL"):gsub("Ctrl", "CTRL")
                        :gsub("alt", "ALT"):gsub("Alt", "ALT")
                        :gsub("super", "SUPER"):gsub("Super", "SUPER")
                        :gsub("shift", "SHIFT"):gsub("Shift", "SHIFT")
+                       
+    -- Restore preserved keysyms with correct case
+    keys_str = keys_str:gsub("__SUPER_L__", "Super_L")
+    keys_str = keys_str:gsub("__SUPER_R__", "Super_R")
+    keys_str = keys_str:gsub("__CTRL_L__", "Control_L")
+    keys_str = keys_str:gsub("__CTRL_R__", "Control_R")
+    keys_str = keys_str:gsub("__ALT_L__", "Alt_L")
+    keys_str = keys_str:gsub("__ALT_R__", "Alt_R")
+    keys_str = keys_str:gsub("__SHIFT_L__", "Shift_L")
+    keys_str = keys_str:gsub("__SHIFT_R__", "Shift_R")
+
     -- Normalize spacing around plusses
     keys_str = keys_str:gsub("%s*%+%s*", " + ")
     -- Clean up multiple spaces
@@ -19,62 +41,145 @@ local function clean_key_combo(keys_str)
 end
 
 local function bind(keys, action, flags)
+    if not keys or keys == "" then return end
     hl.bind(clean_key_combo(keys), action, flags)
 end
 
 local function bind_exec(keys, cmd, flags)
+    if not keys or keys == "" then return end
     hl.bind(clean_key_combo(keys), hl.dsp.exec_cmd(cmd), flags)
 end
 
 local function dsp(cmd, args)
-    return function()
-        hl.dispatch(cmd, args)
+    if cmd == "killactive" then
+        return hl.dsp.window.close()
+    elseif cmd == "togglefloating" then
+        return hl.dsp.window.float()
+    elseif cmd == "pin" then
+        return hl.dsp.window.pin()
+    elseif cmd == "fullscreen" then
+        return hl.dsp.window.fullscreen({ state = tonumber(args) or 0 })
+    elseif cmd == "centerwindow" then
+        return hl.dsp.window.center({ preserve = tonumber(args) == 1 })
+    elseif cmd == "movewindow" then
+        if not args or args == "" then
+            return hl.dsp.window.drag()
+        elseif args == "l" then
+            return hl.dsp.window.move({ direction = "left" })
+        elseif args == "r" then
+            return hl.dsp.window.move({ direction = "right" })
+        elseif args == "u" then
+            return hl.dsp.window.move({ direction = "up" })
+        elseif args == "d" then
+            return hl.dsp.window.move({ direction = "down" })
+        end
+    elseif cmd == "movefocus" then
+        if args == "l" then
+            return hl.dsp.focus({ direction = "left" })
+        elseif args == "r" then
+            return hl.dsp.focus({ direction = "right" })
+        elseif args == "u" then
+            return hl.dsp.focus({ direction = "up" })
+        elseif args == "d" then
+            return hl.dsp.focus({ direction = "down" })
+        end
+    elseif cmd == "workspace" then
+        local ws = args
+        if ws == "-1" then ws = "e-1"
+        elseif ws == "+1" then ws = "e+1"
+        elseif ws == "-10" then ws = "e-10"
+        elseif ws == "+10" then ws = "e+10"
+        end
+        return hl.dsp.focus({ workspace = ws })
+    elseif cmd == "movetoworkspace" then
+        local ws = args
+        if ws == "-1" then ws = "e-1"
+        elseif ws == "+1" then ws = "e+1"
+        end
+        return hl.dsp.window.move({ workspace = ws, follow = true })
+    elseif cmd == "cyclenext" then
+        return hl.dsp.window.cycle_next({ prev = args == "prev" })
+    elseif cmd == "changegroupactive" then
+        if args == "f" then
+            return hl.dsp.group.next()
+        else
+            return hl.dsp.group.prev()
+        end
+    elseif cmd == "togglegroup" then
+        return hl.dsp.group.toggle()
+    elseif cmd == "moveoutofgroup" then
+        return hl.dsp.group.move_window()
+    elseif cmd == "lockactivegroup" then
+        return hl.dsp.group.lock_active({ action = args or "toggle" })
+    elseif cmd == "resizewindow" then
+        return hl.dsp.window.resize()
+    elseif cmd == "resizeactive" then
+        local is_exact = args:match("exact") ~= nil
+        local clean_args = args:gsub("exact", "")
+        local parts = {}
+        for val in clean_args:gmatch("%S+") do
+            table.insert(parts, val)
+        end
+        local x_str = parts[1] or "0"
+        local y_str = parts[2] or "0"
+        local x_pct = x_str:match("(.+)%%")
+        local y_pct = y_str:match("(.+)%%")
+        local x = tonumber(x_pct or x_str) or 0
+        local y = tonumber(y_pct or y_str) or 0
+        
+        if is_exact then
+            if x_pct then x = math.floor(1920 * x / 100) end
+            if y_pct then y = math.floor(1080 * y / 100) end
+            return hl.dsp.window.resize({ x = x, y = y, relative = false })
+        else
+            if x_pct then x = math.floor(1920 * x / 100) end
+            if y_pct then y = math.floor(1080 * y / 100) end
+            return hl.dsp.window.resize({ x = x, y = y, relative = true })
+        end
     end
+    return nil
 end
 
--- Enter global submap on config reload
-os.execute("hyprctl dispatch submap global")
-
 -- All bindings registered in the global submap
-hl.submap("global", function()
-    -- Shell keybinds - Launcher
-    bind("SUPER + SUPER_L", function() hl.dispatch("global", "caelestia:launcher") end, { ignore_mods = true })
+hl.define_submap("global", function()
+    -- Shell keybinds - Launcher (Bound to press to avoid lag, catchall handles interrupt)
+    bind("SUPER + Super_L", hl.dsp.global("caelestia:launcher"), { ignore_mods = true })
     
     local mouse_keys = { "mouse:272", "mouse:273", "mouse:274", "mouse:275", "mouse:276", "mouse:277", "mouse_up", "mouse_down" }
     for _, key in ipairs(mouse_keys) do
-        bind("SUPER + " .. key, function() hl.dispatch("global", "caelestia:launcherInterrupt") end, { ignore_mods = true, non_consuming = true })
+        bind("SUPER + " .. key, hl.dsp.global("caelestia:launcherInterrupt"), { ignore_mods = true, non_consuming = true })
     end
     
-    bind("SUPER + catchall", function() hl.dispatch("global", "caelestia:launcherInterrupt") end, { ignore_mods = true, non_consuming = true })
+    bind("catchall", hl.dsp.global("caelestia:launcherInterrupt"), { ignore_mods = true, non_consuming = true })
 
     -- Misc Shell Keybinds
-    bind(vars.kbSession, function() hl.dispatch("global", "caelestia:session") end)
-    bind(vars.kbShowSidebar, function() hl.dispatch("global", "caelestia:sidebar") end)
-    bind(vars.kbClearNotifs, function() hl.dispatch("global", "caelestia:clearNotifs") end, { locked = true })
-    bind(vars.kbShowPanels, function() hl.dispatch("global", "caelestia:dashboard") end)
-    bind(vars.kbLock, function() hl.dispatch("global", "caelestia:lock") end)
+    bind(vars.kbSession, hl.dsp.global("caelestia:session"))
+    bind(vars.kbShowSidebar, hl.dsp.global("caelestia:sidebar"))
+    bind(vars.kbClearNotifs, hl.dsp.global("caelestia:clearNotifs"), { locked = true })
+    bind(vars.kbShowPanels, hl.dsp.global("caelestia:dashboard"))
+    bind(vars.kbLock, hl.dsp.global("caelestia:lock"))
 
     -- Restore lock
     bind_exec(vars.kbRestoreLock, "caelestia shell -d", { locked = true })
-    bind(vars.kbRestoreLock, function() hl.dispatch("global", "caelestia:lock") end, { locked = true })
+    bind(vars.kbRestoreLock, hl.dsp.global("caelestia:lock"), { locked = true })
 
     -- Brightness
-    bind("XF86MonBrightnessUp", function() hl.dispatch("global", "caelestia:brightnessUp") end, { locked = true })
-    bind("XF86MonBrightnessDown", function() hl.dispatch("global", "caelestia:brightnessDown") end, { locked = true })
+    bind("XF86MonBrightnessUp", hl.dsp.global("caelestia:brightnessUp"), { locked = true })
+    bind("XF86MonBrightnessDown", hl.dsp.global("caelestia:brightnessDown"), { locked = true })
 
     -- Media
-    bind("Ctrl + SUPER + Space", function() hl.dispatch("global", "caelestia:mediaToggle") end, { locked = true })
-    bind("XF86AudioPlay", function() hl.dispatch("global", "caelestia:mediaToggle") end, { locked = true })
-    bind("XF86AudioPause", function() hl.dispatch("global", "caelestia:mediaToggle") end, { locked = true })
-    bind("Ctrl + SUPER + Equal", function() hl.dispatch("global", "caelestia:mediaNext") end, { locked = true })
-    bind("XF86AudioNext", function() hl.dispatch("global", "caelestia:mediaNext") end, { locked = true })
-    bind("Ctrl + SUPER + Minus", function() hl.dispatch("global", "caelestia:mediaPrev") end, { locked = true })
-    bind("XF86AudioPrev", function() hl.dispatch("global", "caelestia:mediaPrev") end, { locked = true })
-    bind("XF86AudioStop", function() hl.dispatch("global", "caelestia:mediaStop") end, { locked = true })
+    bind("Ctrl + SUPER + Space", hl.dsp.global("caelestia:mediaToggle"), { locked = true })
+    bind("XF86AudioPlay", hl.dsp.global("caelestia:mediaToggle"), { locked = true })
+    bind("XF86AudioPause", hl.dsp.global("caelestia:mediaToggle"), { locked = true })
+    bind("Ctrl + SUPER + Equal", hl.dsp.global("caelestia:mediaNext"), { locked = true })
+    bind("XF86AudioNext", hl.dsp.global("caelestia:mediaNext"), { locked = true })
+    bind("Ctrl + SUPER + Minus", hl.dsp.global("caelestia:mediaPrev"), { locked = true })
+    bind("XF86AudioPrev", hl.dsp.global("caelestia:mediaPrev"), { locked = true })
+    bind("XF86AudioStop", hl.dsp.global("caelestia:mediaStop"), { locked = true })
 
     -- Kill/restart
-    bind_exec("Ctrl + SUPER + SHIFT + R", "qs -c caelestia kill", { release = true })
-    bind_exec("Ctrl + SUPER + ALT + R", "qs -c caelestia kill; sleep .1; caelestia shell -d", { release = true })
+    bind_exec("Ctrl + SUPER + SHIFT + R", "caelestia shell -k", { release = true })
+    bind_exec("Ctrl + SUPER + ALT + R", "caelestia shell -k; sleep .1; caelestia shell -d", { release = true })
 
     -- Workspaces navigation and management
     local wsaction = "~/.config/hypr/scripts/wsaction.fish"
@@ -163,6 +268,7 @@ hl.submap("global", function()
     bind_exec(vars.kbMusic, "caelestia toggle music")
     bind_exec(vars.kbWhatsapp, "caelestia toggle whatsapp")
     bind_exec(vars.kbTeams, "caelestia toggle teams")
+    bind_exec(vars.kbDiscord, "caelestia toggle communication")
 
     -- Apps
     bind_exec(vars.kbTerminal, "app2unit -- " .. vars.terminal)
@@ -175,14 +281,12 @@ hl.submap("global", function()
 
     -- Utilities
     bind_exec("Print", "caelestia screenshot", { locked = true })
-    bind("SUPER + SHIFT + S", function() hl.dispatch("global", "caelestia:screenshotFreeze") end)
-    bind("SUPER + SHIFT + ALT + S", function() hl.dispatch("global", "caelestia:screenshot") end)
+    bind("SUPER + SHIFT + S", hl.dsp.global("caelestia:screenshotFreeze"))
+    bind("SUPER + SHIFT + ALT + S", hl.dsp.global("caelestia:screenshot"))
     bind_exec("SUPER + ALT + R", "caelestia record -s")
     bind_exec("Ctrl + ALT + R", "caelestia record")
     bind_exec("SUPER + SHIFT + ALT + R", "caelestia record -r")
     bind_exec("SUPER + SHIFT + C", "hyprpicker -a")
-    bind_exec("SUPER + ALT + W", "fish -c work-wallpaper")
-    bind_exec("SUPER + ALT + G", "fish -c goon-wallpaper")
 
     -- Volume
     bind_exec("XF86AudioMicMute", "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", { locked = true })
@@ -192,7 +296,7 @@ hl.submap("global", function()
     bind_exec("XF86AudioLowerVolume", "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ " .. vars.volumeStep .. "%-", { locked = true, repeating = true })
 
     -- Sleep
-    bind_exec("SUPER + SHIFT + L", "systemctl suspend-then-hibernate", { locked = true })
+    bind_exec("SUPER + SHIFT + L", "systemctl --no-block suspend-then-hibernate", { locked = true })
 
     -- Clipboard and emoji picker
     bind_exec("SUPER + V", "pkill fuzzel || caelestia clipboard")
@@ -203,3 +307,8 @@ hl.submap("global", function()
     -- Testing
     bind_exec("SUPER + ALT + f12", 'notify-send -u low -i dialog-information-symbolic \'Test notification\' "Here\'s a really long message to test truncation and wrapping\\nYou can middle click or flick this notification to dismiss it!" -a \'Shell\' -A "Test1=I got it!" -A "Test2=Another action"', { locked = true })
 end)
+
+-- Enter global submap on config reload (deferred to prevent early startup crash)
+hl.timer(function()
+    hl.dispatch(hl.dsp.submap("global"))
+end, { timeout = 50, type = "oneshot" })

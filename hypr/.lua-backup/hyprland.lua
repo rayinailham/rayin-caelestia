@@ -141,11 +141,33 @@ local function clean_key_combo(keys_str)
     if not keys_str then return "" end
     -- Replace commas with plus
     keys_str = keys_str:gsub(",", " + ")
+    
+    -- Preserve keysyms containing mod names from being capitalized
+    keys_str = keys_str:gsub("[Ss][Uu][Pp][Ee][Rr]_[Ll]", "__SUPER_L__")
+    keys_str = keys_str:gsub("[Ss][Uu][Pp][Ee][Rr]_[Rr]", "__SUPER_R__")
+    keys_str = keys_str:gsub("[Cc][Tt][Rr][Ll]_[Ll]", "__CTRL_L__")
+    keys_str = keys_str:gsub("[Cc][Tt][Rr][Ll]_[Rr]", "__CTRL_R__")
+    keys_str = keys_str:gsub("[Aa][Ll][Tt]_[Ll]", "__ALT_L__")
+    keys_str = keys_str:gsub("[Aa][Ll][Tt]_[Rr]", "__ALT_R__")
+    keys_str = keys_str:gsub("[Ss][Hh][Ii][Ff][Tt]_[Ll]", "__SHIFT_L__")
+    keys_str = keys_str:gsub("[Ss][Hh][Ii][Ff][Tt]_[Rr]", "__SHIFT_R__")
+
     -- Normalize modifiers to uppercase
     keys_str = keys_str:gsub("ctrl", "CTRL"):gsub("Ctrl", "CTRL")
                        :gsub("alt", "ALT"):gsub("Alt", "ALT")
                        :gsub("super", "SUPER"):gsub("Super", "SUPER")
                        :gsub("shift", "SHIFT"):gsub("Shift", "SHIFT")
+                       
+    -- Restore preserved keysyms with correct case
+    keys_str = keys_str:gsub("__SUPER_L__", "Super_L")
+    keys_str = keys_str:gsub("__SUPER_R__", "Super_R")
+    keys_str = keys_str:gsub("__CTRL_L__", "Control_L")
+    keys_str = keys_str:gsub("__CTRL_R__", "Control_R")
+    keys_str = keys_str:gsub("__ALT_L__", "Alt_L")
+    keys_str = keys_str:gsub("__ALT_R__", "Alt_R")
+    keys_str = keys_str:gsub("__SHIFT_L__", "Shift_L")
+    keys_str = keys_str:gsub("__SHIFT_R__", "Shift_R")
+
     -- Normalize spacing around plusses
     keys_str = keys_str:gsub("%s*%+%s*", " + ")
     -- Clean up multiple spaces
@@ -216,7 +238,7 @@ local function parse_legacy_conf(filepath, vars)
             elseif rule_type == "bind" or rule_type == "bindi" or rule_type == "binde" or rule_type == "bindl" or rule_type == "bindr" or rule_type == "bindm" then
                 local parts = {}
                 for part in rule_val:gmatch("[^,]+") do
-                    table.insert(parts, part:gsub("^%s+", ""):gsub("%s+$", ""))
+                    table.insert(parts, (part:gsub("^%s+", ""):gsub("%s+$", "")))
                 end
                 if #parts >= 3 then
                     local mods = parts[1]
@@ -241,7 +263,7 @@ local function parse_legacy_conf(filepath, vars)
                     if dispatcher == "exec" or dispatcher == "exec-once" then
                         dsp_fn = hl.dsp.exec_cmd(arg_str)
                     else
-                        dsp_fn = function() hl.dispatch(dispatcher, arg_str) end
+                        dsp_fn = hl.dsp.exec_cmd("hyprctl dispatch " .. dispatcher .. " " .. arg_str)
                     end
                     hl.bind(clean_key_combo(keys_str), dsp_fn, flags)
                 end
@@ -252,4 +274,6 @@ local function parse_legacy_conf(filepath, vars)
 end
 
 -- 8. Dynamically parse legacy user configurations to support caelestia theme/user additions
-parse_legacy_conf(c_conf_dir .. "/hypr-user.conf", vars)
+hl.define_submap("global", function()
+    parse_legacy_conf(c_conf_dir .. "/hypr-user.conf", vars)
+end)
