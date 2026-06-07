@@ -13,3 +13,9 @@ export XDG_SESSION_DESKTOP=Hyprland
 # ############# Others #############
 export _JAVA_AWT_WM_NONREPARENTING=1
 
+# ######## Config source of truth ########
+# Pin Hyprland to the mature Hyprlang (.conf) config.
+# Without this, Hyprland 0.55+ auto-prefers the experimental hyprland.lua
+# and silently ignores hyprland.conf. See ~/.config/hypr/hyprland.conf.
+export HYPRLAND_CONFIG="$HOME/.config/hypr/hyprland.conf"
+

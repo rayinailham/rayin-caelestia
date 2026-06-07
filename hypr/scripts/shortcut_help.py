@@ -84,8 +84,6 @@ KEYBINDS = [
     {"category": "Utilities", "action": "Record Full Screen (Silent)", "keys": ["Ctrl", "Alt", "R"]},
     {"category": "Utilities", "action": "Record Selection (Silent)", "keys": ["Super", "Shift", "Alt", "R"]},
     {"category": "Utilities", "action": "Color Picker", "keys": ["Super", "Shift", "C"]},
-    {"category": "Utilities", "action": "Switch to Work Wallpaper", "keys": ["Super", "Alt", "W"]},
-    {"category": "Utilities", "action": "Switch to Gaming Wallpaper", "keys": ["Super", "Alt", "G"]},
     {"category": "Utilities", "action": "Clipboard History Menu", "keys": ["Super", "V"]},
     {"category": "Utilities", "action": "Clipboard Delete Item Menu", "keys": ["Super", "Alt", "V"]},
     {"category": "Utilities", "action": "Emoji Picker", "keys": ["Super", "."]},

@@ -225,7 +225,7 @@ style = "bold bright-yellow"
 format = " [rb](italic) [${symbol}${version}]($style)"
 symbol = "◆ "
 version_format = "${raw}"
-style = "bold red"
+style = "bold blue"
 
 [rust]
 format = " [rs](italic) [$symbol$version]($style)"
@@ -248,7 +248,7 @@ version_format = "${raw}"
 [aws]
 disabled = true
 format = " [aws](italic) [$symbol $profile $region]($style)"
-style = "bold blue"
+style = "bold red"
 symbol = "▲ "
 
 [buf]

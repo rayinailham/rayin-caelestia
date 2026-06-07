@@ -2,8 +2,8 @@
 
 # Configuration Paths
 SHELL_CONFIG="$HOME/.config/caelestia/shell.json"
-WORK_DIR="$HOME/Pictures/work-wallpapers"
-GOON_DIR="$HOME/Pictures/goon-wallpapers"
+WORK_DIR="$HOME/Pictures/Wallpapers/work-wallpapers"
+GOON_DIR="$HOME/Pictures/Wallpapers/goon-wallpapers"
 STATE_FILE="$HOME/.cache/caelestia/wallpaper_mode.txt"
 
 # Default Steam Wallpaper Engine Path or ID (update this with your workshop path/ID)
@@ -27,15 +27,13 @@ case "$1" in
     work)
         echo "Switching to Work Mode..."
         pkill -f linux-wallpaperengine
-        toggle_caelestia_wallpaper true
-        caelestia wallpaper -n -r "$WORK_DIR"
+        "$HOME/.config/hypr/scripts/wallpaper.sh" -r "$WORK_DIR"
         echo "work" > "$STATE_FILE"
         ;;
     goon)
         echo "Switching to Goon Mode..."
         pkill -f linux-wallpaperengine
-        toggle_caelestia_wallpaper true
-        caelestia wallpaper -n -r "$GOON_DIR"
+        "$HOME/.config/hypr/scripts/wallpaper.sh" -r "$GOON_DIR"
         echo "goon" > "$STATE_FILE"
         ;;
     steam)
