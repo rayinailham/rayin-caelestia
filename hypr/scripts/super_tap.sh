@@ -4,6 +4,8 @@ press_time_file="/tmp/super_press_time"
 press_win_file="/tmp/super_press_window"
 press_ws_file="/tmp/super_press_workspace"
 
+echo "ARG: $1" >> /tmp/super_tap.log
+
 case "$1" in
     press)
         date +%s%3N > "$press_time_file"
@@ -21,8 +23,10 @@ case "$1" in
 
         time_diff=$((now - press_time))
 
-        if [ $time_diff -lt 200 ] && [ "$press_window" = "$current_window" ] && [ "$press_workspace" = "$current_workspace" ]; then
-            hyprctl dispatch global caelestia:launcher
+        echo "Time diff: $time_diff, Stored win: $press_window, Current win: $current_window, Stored ws: $press_workspace, Current ws: $current_workspace" >> /tmp/super_tap.log
+
+        if [ $time_diff -lt 250 ] && [ "$press_window" = "$current_window" ] && [ "$press_workspace" = "$current_workspace" ]; then
+            caelestia shell drawers toggle launcher
         fi
         ;;
     *)
