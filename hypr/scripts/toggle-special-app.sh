@@ -9,7 +9,6 @@ case "$name" in
     browser) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefade -25%" >/dev/null ;;
     music) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefadevert -25%" >/dev/null ;;
     whatsapp) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefade 25%" >/dev/null ;;
-    teams) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefadevert 25%" >/dev/null ;;
     communication) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefade -25%" >/dev/null ;;
     github) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, fade" >/dev/null ;;
 esac

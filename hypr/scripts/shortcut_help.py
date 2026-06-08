@@ -13,10 +13,10 @@ KEYBINDS = [
     {"category": "Workspaces", "action": "Previous Workspace", "keys": ["Ctrl", "Super", "Left"]},
     {"category": "Workspaces", "action": "Next Workspace (Alt)", "keys": ["Super", "Page_Down"]},
     {"category": "Workspaces", "action": "Previous Workspace (Alt)", "keys": ["Super", "Page_Up"]},
-    {"category": "Workspaces", "action": "Scroll Next Workspace", "keys": ["Super", "Scroll Down"]},
-    {"category": "Workspaces", "action": "Scroll Prev Workspace", "keys": ["Super", "Scroll Up"]},
-    {"category": "Workspaces", "action": "Next Workspace Group", "keys": ["Ctrl", "Super", "Scroll Down"]},
-    {"category": "Workspaces", "action": "Prev Workspace Group", "keys": ["Ctrl", "Super", "Scroll Up"]},
+    {"category": "Workspaces", "action": "Scroll Next Workspace", "keys": ["Super", "Scroll Up"]},
+    {"category": "Workspaces", "action": "Scroll Prev Workspace", "keys": ["Super", "Scroll Down"]},
+    {"category": "Workspaces", "action": "Next Workspace Group", "keys": ["Ctrl", "Super", "Scroll Up"]},
+    {"category": "Workspaces", "action": "Prev Workspace Group", "keys": ["Ctrl", "Super", "Scroll Down"]},
     {"category": "Workspaces", "action": "Toggle Special Workspace", "keys": ["Super", "S"]},
 
     # Window Placement
@@ -51,7 +51,7 @@ KEYBINDS = [
 
     # Window Groups (Tabs)
     {"category": "Window Groups (Tabs)", "action": "Toggle Tab Group", "keys": ["Super", ","]},
-    {"category": "Window Groups (Tabs)", "action": "Ungroup Active Window", "keys": ["Super", "U"]},
+    {"category": "Window Groups (Tabs)", "action": "Ungroup Active Window", "keys": ["Super", "Shift", "U"]},
     {"category": "Window Groups (Tabs)", "action": "Cycle Tab Forward", "keys": ["Alt", "Tab"]},
     {"category": "Window Groups (Tabs)", "action": "Cycle Tab Backward", "keys": ["Shift", "Alt", "Tab"]},
     {"category": "Window Groups (Tabs)", "action": "Switch Active Group Tab Forward", "keys": ["Ctrl", "Alt", "Tab"]},
@@ -70,7 +70,7 @@ KEYBINDS = [
     {"category": "Apps & Launchers", "action": "Toggle Music Overlay", "keys": ["Super", "M"]},
     {"category": "Apps & Launchers", "action": "Toggle Discord Overlay", "keys": ["Super", "D"]},
     {"category": "Apps & Launchers", "action": "Toggle WhatsApp Overlay", "keys": ["Super", "W"]},
-    {"category": "Apps & Launchers", "action": "Toggle Teams Overlay", "keys": ["Super", "U"]},
+
 
     # Utilities
     {"category": "Utilities", "action": "Shortcut Help Menu", "keys": ["Super", "/"]},
@@ -145,7 +145,7 @@ def load_colors():
 class KeybindsWindow(Gtk.Window):
     def __init__(self):
         super().__init__(title="Hyprland & Caelestia Keybinds")
-        self.set_default_size(700, 560)
+        self.set_default_size(820, 640)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_wmclass("shortcut-helper", "shortcut-helper")
         
@@ -153,27 +153,28 @@ class KeybindsWindow(Gtk.Window):
         self.apply_css()
         
         # Main Layout
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        vbox.set_margin_top(15)
-        vbox.set_margin_bottom(15)
-        vbox.set_margin_start(15)
-        vbox.set_margin_end(15)
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        vbox.get_style_context().add_class("main-card")
+        vbox.set_margin_top(18)
+        vbox.set_margin_bottom(18)
+        vbox.set_margin_start(18)
+        vbox.set_margin_end(18)
         self.add(vbox)
         
         # Header Box (Title & Escape Hint)
-        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        title = Gtk.Label(label="⌨️  Hyprland & Caelestia Shortcuts")
+        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        title = Gtk.Label(label="Hyprland Shortcuts")
         title.get_style_context().add_class("title-label")
         header_box.pack_start(title, False, False, 0)
         
-        escape_lbl = Gtk.Label(label="[Esc] to close")
+        escape_lbl = Gtk.Label(label="Esc closes")
         escape_lbl.get_style_context().add_class("escape-hint")
         header_box.pack_end(escape_lbl, False, False, 0)
         vbox.pack_start(header_box, False, False, 0)
         
         # Search Entry
         self.search_entry = Gtk.SearchEntry()
-        self.search_entry.set_placeholder_text("Type to search shortcuts...")
+        self.search_entry.set_placeholder_text("Search shortcuts...")
         self.search_entry.get_style_context().add_class("search-bar")
         self.search_entry.connect("search-changed", self.on_search_changed)
         vbox.pack_start(self.search_entry, False, False, 0)
@@ -228,32 +229,41 @@ class KeybindsWindow(Gtk.Window):
             background-color: {colors.get('background', '#121414')};
             color: {colors.get('text', '#e3e2e3')};
         }}
+        .main-card {{
+            background-color: {colors.get('surfaceContainerLow', '#1a1c1d')};
+            border: 1px solid {colors.get('outlineVariant', '#42484b')};
+            border-radius: 18px;
+            padding: 16px;
+        }}
         .title-label {{
-            font-size: 16px;
+            font-size: 22px;
             font-weight: bold;
             color: {colors.get('primary', '#abccda')};
         }}
         .escape-hint {{
-            font-size: 11px;
+            font-size: 12px;
             color: {colors.get('subtext0', '#8b9295')};
             font-family: monospace;
+            padding: 6px 10px;
+            border: 1px solid {colors.get('outlineVariant', '#42484b')};
+            border-radius: 999px;
         }}
         .search-bar {{
-            background-color: {colors.get('surfaceContainerLow', '#1a1c1d')};
+            background-color: {colors.get('background', '#121414')};
             border: 1px solid {colors.get('outlineVariant', '#42484b')};
-            border-radius: 8px;
-            padding: 8px;
+            border-radius: 12px;
+            padding: 10px 12px;
             color: {colors.get('text', '#e3e2e3')};
-            font-size: 13px;
+            font-size: 14px;
         }}
         .search-bar:focus {{
             border-color: {colors.get('primary', '#abccda')};
         }}
         button.category-btn {{
-            background: {colors.get('surfaceContainerLow', '#1a1c1d')};
+            background: {colors.get('background', '#121414')};
             border: 1px solid {colors.get('outlineVariant', '#42484b')};
-            border-radius: 8px;
-            padding: 6px 10px;
+            border-radius: 999px;
+            padding: 7px 12px;
             color: {colors.get('text', '#e3e2e3')};
             font-size: 12px;
             font-weight: bold;
@@ -271,38 +281,38 @@ class KeybindsWindow(Gtk.Window):
             border-color: {colors.get('primary', '#abccda')};
         }}
         .key-row {{
-            padding: 10px 12px;
+            padding: 12px 14px;
             background-color: transparent;
-            border-bottom: 1px solid {colors.get('surfaceContainerLow', '#1a1c1d')};
+            border-bottom: 1px solid {colors.get('outlineVariant', '#42484b')};
         }}
         .key-row:hover {{
             background-color: {colors.get('surfaceContainerHigh', '#292a2b')};
         }}
         .key-action {{
-            font-size: 13px;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 600;
             color: {colors.get('text', '#e3e2e3')};
         }}
         .key-category {{
-            font-size: 9px;
+            font-size: 10px;
             color: {colors.get('subtext0', '#8b9295')};
             font-weight: bold;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
         }}
         .keycap {{
-            background-color: {colors.get('surfaceContainerHighest', '#343536')};
+            background-color: {colors.get('background', '#121414')};
             color: {colors.get('onSurface', '#e3e2e3')};
             border: 1px solid {colors.get('outline', '#8b9295')};
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 11px;
+            border-radius: 7px;
+            padding: 3px 8px;
+            font-size: 12px;
             font-family: monospace;
             font-weight: bold;
         }}
         scrolledwindow {{
             border: 1px solid {colors.get('outlineVariant', '#42484b')};
-            border-radius: 8px;
-            background-color: {colors.get('surfaceContainerLow', '#1a1c1d')};
+            border-radius: 14px;
+            background-color: {colors.get('background', '#121414')};
         }}
         listbox {{
             background-color: transparent;

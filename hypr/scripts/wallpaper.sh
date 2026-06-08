@@ -13,6 +13,8 @@ set -euo pipefail
 STATE_FILE="$HOME/.cache/caelestia/current_wallpaper"
 CAELESTIA_WALLPAPER_STATE="$HOME/.local/state/caelestia/wallpaper/path.txt"
 LOCK_FILE="$HOME/.cache/caelestia/wallpaper.lock"
+WORK_DIR="$HOME/Pictures/Wallpapers/work-wallpapers"
+GOON_DIR="$HOME/Pictures/Wallpapers/goon-wallpapers"
 # Transition tuning (all read natively by awww via these env vars).
 # DURATION is the main "speed" knob: bigger = slower/smoother.
 : "${AWWW_TRANSITION:=grow}"
@@ -52,6 +54,19 @@ flock -n 9 || exit 0
 
 err() { notify-send "Wallpaper" "$1" -i dialog-warning 2>/dev/null || true; echo "$1" >&2; }
 
+in_work_hours() {
+    local now
+    now="$(date +%H%M)"
+    [ "$now" -ge 0830 ] && [ "$now" -lt 1730 ]
+}
+
+is_goon_path() {
+    case "$1" in
+        "$GOON_DIR"|"$GOON_DIR"/*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # Ensure the daemon is up before issuing commands.
 ensure_daemon() {
     if ! awww query >/dev/null 2>&1; then
@@ -70,6 +85,11 @@ ensure_daemon() {
 apply() {
     local file="$1"
     [ -f "$file" ] || { err "Not a file: $file"; exit 1; }
+    if in_work_hours && is_goon_path "$file"; then
+        err "Goon wallpapers are blocked until 17:30; switching to work wallpapers."
+        random_from "$WORK_DIR"
+        return
+    fi
     ensure_daemon
     # Update the widget theme immediately; awww still animates the wallpaper for 300ms.
     mkdir -p "$(dirname "$CAELESTIA_WALLPAPER_STATE")"
@@ -113,6 +133,11 @@ _save_cooldowns() {
 random_from() {
     local dir="$1"
     [ -d "$dir" ] || { err "Not a directory: $dir"; exit 1; }
+    if in_work_hours && is_goon_path "$dir"; then
+        err "Goon wallpapers are blocked until 17:30; switching to work wallpapers."
+        dir="$WORK_DIR"
+        [ -d "$dir" ] || { err "Not a directory: $dir"; exit 1; }
+    fi
 
     _load_cooldowns
     _tick_cooldowns

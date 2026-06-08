@@ -1,0 +1,75 @@
+{
+  "theme": {
+    "postHook": "touch ~/.config/foot/foot.ini && /home/rayin/.config/caelestia/post_theme.sh"
+  },
+  "toggles": {
+    "browser": {
+      "zen": {
+        "enable": true,
+        "match": [
+          {"class": "app.zen_browser.zen"}
+        ],
+        "command": ["flatpak", "run", "app.zen_browser.zen"],
+        "move": true
+      }
+    },
+    "whatsapp": {
+      "whatsdesk": {
+        "enable": true,
+        "match": [
+          {"class": "whatsdesk"},
+          {"class": "WhatsDesk"}
+        ],
+        "command": ["whatsdesk"],
+        "move": true
+      }
+    },
+    "teams": {
+      "teams-for-linux": {
+        "enable": true,
+        "match": [
+          {"class": "teams-for-linux"}
+        ],
+        "command": ["teams-for-linux"],
+        "move": true
+      }
+    },
+    "communication": {
+      "discord": {
+        "enable": true,
+        "match": [
+          {"class": "vesktop"},
+          {"class": "Vesktop"},
+          {"class": "discord"}
+        ],
+        "command": ["flatpak", "run", "dev.vencord.Vesktop"],
+        "move": true
+      }
+    },
+    "music": {
+      "spotify": {
+        "enable": false
+      },
+      "youtube-music": {
+        "enable": true,
+        "match": [
+          {"class": "com.github.th_ch.youtube_music"},
+          {"class": "youtube-music"}
+        ],
+        "command": ["/home/rayin/.local/bin/pear-desktop", "--no-sandbox"],
+        "move": true
+      }
+    },
+    "github": {
+      "github-desktop": {
+        "enable": true,
+        "match": [
+          {"class": "GitHub Desktop"},
+          {"class": "github-desktop"}
+        ],
+        "command": ["github-desktop"],
+        "move": true
+      }
+    }
+  }
+}
