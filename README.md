@@ -1,21 +1,73 @@
-# caelestia
+# rayin-caelestia
 
-This is the main repo of the caelestia dots and contains the user configs for
-apps. This repo also includes an install script to install the entire dots.
+My personal rice, a fork of the [caelestia](https://github.com/caelestia-dots)
+dots tuned for my laptop. Hyprland on Arch (CachyOS), with the Caelestia
+Quickshell shell and a set of app configs.
+
+This repo contains the user configs plus an install script that symlinks
+everything into place.
+
+## My setup
+
+-   **OS:** CachyOS (Arch-based)
+-   **Compositor:** Hyprland (Wayland)
+-   **Shell/bar:** Caelestia (Quickshell)
+-   **GPU:** Hybrid Intel TigerLake-H UHD (iGPU) + NVIDIA RTX 3060 Laptop
+-   **Panel:** eDP-1, 2560x1440 @ 165Hz (wired to the Intel iGPU)
+-   **Terminal:** foot · **Shell:** fish · **Browser:** Zen
+
+> [!NOTE]
+> The internal panel is wired to the Intel iGPU, so the desktop and all
+> native Wayland rendering run on Intel. The NVIDIA dGPU is used per-app via
+> `prime-run` only. Do not force global NVIDIA env vars (`GBM_BACKEND`,
+> `__GLX_VENDOR_LIBRARY_NAME`, etc.) or the internal display gets choppy.
+
+## Performance tuning (165Hz)
+
+This fork is tuned to actually hit ~160 FPS on the internal panel instead of
+being stuck around 60-78 FPS. If you reuse these dots on different hardware,
+review these first.
+
+Config-level changes (already in this repo):
+
+-   `hypr/variables.conf`: blur disabled, window opacity set to `1.0` to cut
+    compositor work.
+-   `hypr/hyprland/env.conf`: removed global NVIDIA forcing so the panel stays
+    on Intel.
+-   `quickshell/caelestia/modules/background/GifCorner.qml`: the animated
+    corner gif was forcing poor frame pacing as a full-size layer surface. It
+    is now smaller (160x160), slower (`speed 0.35`), decoded at display size
+    (`sourceSize`), and `asynchronous` + `cache` enabled.
+-   `caelestia/shell.json`: dashboard layer disabled.
+
+System-level change (NOT in this repo, machine-specific):
+
+> [!IMPORTANT]
+> The single biggest win was disabling Intel Panel Self Refresh. Add
+> `i915.enable_psr=0` to the kernel command line (for me, in
+> `/boot/limine.conf`). This lives outside the repo, so reapply it manually
+> after a reinstall. Do **not** also disable FBC/DC (`i915.enable_fbc=0`,
+> `i915.enable_dc=0`); in testing those made pacing worse.
+
+Quick checks if FPS regresses:
+
+```sh
+cat /proc/cmdline                       # expect i915.enable_psr=0
+hyprctl monitors all                    # expect eDP-1 ... @165, hardwareCursorsInUse: true
+weston-simple-egl                       # native Wayland frame pacing sample
+hyprctl layers                          # watch for heavy fullscreen layer surfaces
+```
 
 ## Installation
 
-Simply clone this repo and run the install script (you need
-[`fish`](https://github.com/fish-shell/fish-shell) installed).
+Clone the repo and run the install script (needs
+[`fish`](https://github.com/fish-shell/fish-shell)).
 
 > [!WARNING]
 > The install script symlinks all configs into place, so you CANNOT
-> move/remove the repo folder once you run the install script. If
-> you do, most apps will not behave properly and some (e.g. Hyprland)
-> will fail to start completely. I recommend cloning the repo to
+> move/remove the repo folder once you run it. If you do, most apps will
+> misbehave and some (e.g. Hyprland) will fail to start. Clone to
 > `~/.local/share/caelestia`.
-
-The install script has some options for installing configs for some apps.
 
 ```
 $ ./install.fish -h
@@ -34,7 +86,7 @@ options:
 For example:
 
 ```sh
-git clone https://github.com/caelestia-dots/caelestia.git ~/.local/share/caelestia
+git clone https://github.com/rayinailham/rayin-caelestia.git ~/.local/share/caelestia
 ~/.local/share/caelestia/install.fish
 ```
 
@@ -116,20 +168,18 @@ Finally, install the CaelestiaFox extension from [here](https://addons.mozilla.o
 
 ## Updating
 
-Simply run `yay` to update the AUR packages, then `cd` into the repo directory and run `git pull` to update the configs.
+Run `yay` to update the AUR packages, then `cd` into the repo directory and run `git pull` to update the configs.
 
 ## Usage
 
 > [!NOTE]
-> These dots do not contain a login manager (for now), so you must install a
-> login manager yourself unless you want to log in from a TTY. I recommend
+> These dots do not contain a login manager, so install one yourself unless
+> you want to log in from a TTY. I recommend
 > [`greetd`](https://sr.ht/~kennylevinsen/greetd) with
-> [`tuigreet`](https://github.com/apognu/tuigreet), however you can use
-> any login manager you want.
+> [`tuigreet`](https://github.com/apognu/tuigreet), but any login manager works.
 
-There aren't really any usage instructions... these are a set of dotfiles.
-
-Here's a list of useful keybinds though:
+These are just dotfiles, so there aren't real usage instructions. Some useful
+keybinds:
 
 -   `Super` - open launcher
 -   `Super` + `#` - switch to workspace `#`
@@ -138,6 +188,13 @@ Here's a list of useful keybinds though:
 -   `Super` + `W` - open browser (zen)
 -   `Super` + `C` - open IDE (vscodium)
 -   `Super` + `S` - toggle special workspace or close current special workspace
+-   `Super` + `G` - toggle GitHub Desktop special workspace
+-   `Super` + `/` - open the shortcuts helper
 -   `Ctrl` `Alt` + `Delete` - open session menu
 -   `Ctrl` `Super` + `Space` - toggle media play state
 -   `Ctrl` `Super` `Alt` + `R` - restart the shell
+
+## Credits
+
+Based on the [caelestia-dots](https://github.com/caelestia-dots) project.
+This is my personal fork with hardware-specific tuning and tweaks.
