@@ -12,6 +12,9 @@ log() {
     printf '[focus-idle-inhibit] %s\n' "$*" >&2
 }
 
+AUTO_ENABLED=false
+AUTO_ENABLED_SINCE=""
+
 qs_call() {
     qs -c "$QS_CONFIG" ipc call idleInhibitor "$1" >/dev/null 2>&1
 }
@@ -20,13 +23,25 @@ inhibitor_enabled() {
     qs -c "$QS_CONFIG" ipc call idleInhibitor isEnabled 2>/dev/null | grep -qx 'true'
 }
 
+enabled_since_ms() {
+    qs -c "$QS_CONFIG" ipc call idleInhibitor enabledSinceMs 2>/dev/null || true
+}
+
 set_inhibit() {
     local want="$1"
 
     if [[ "$want" == true ]]; then
-        inhibitor_enabled || qs_call enable
+        if ! inhibitor_enabled; then
+            qs_call enable
+            AUTO_ENABLED=true
+            AUTO_ENABLED_SINCE="$(enabled_since_ms)"
+        fi
     else
-        inhibitor_enabled && qs_call disable
+        if [[ "$AUTO_ENABLED" == true ]] && inhibitor_enabled && [[ "$(enabled_since_ms)" == "$AUTO_ENABLED_SINCE" ]]; then
+            qs_call disable
+        fi
+        AUTO_ENABLED=false
+        AUTO_ENABLED_SINCE=""
     fi
 }
 

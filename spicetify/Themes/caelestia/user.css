@@ -56,8 +56,12 @@ button,
   display: none !important;
 }
 
-.main-view-container__scroll-node-child div[style*="--background-base"]:not([style*="--background-base-min-contrast"]) {
-  display: none !important;
+/* Ensure playlist description is always visible */
+.playlist-playlist-playlistDescription,
+.main-entityHeader-headerText div:has(.playlist-playlist-playlistDescription) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* Make playlist looks better */
@@ -125,4 +129,21 @@ button,
   > .os-scrollbar-vertical
   > .os-scrollbar-track {
   width: 4px;
+}
+
+/* Friend Activity: Bright Online Indicator & Now Playing Equalizer */
+:root {
+  --friend-online-color: #1ed760; /* Ganti ke #00d2ff jika ingin Biru Online */
+}
+
+aside#Desktop_PanelContainer_Id figure::after,
+aside#Desktop_PanelContainer_Id .main-image-image[class*="dxno"]::after,
+.dxnoOaM5IA8_Pl1O::after {
+  background: var(--friend-online-color) !important;
+  box-shadow: 0 0 6px var(--friend-online-color), 0 0 0 2px var(--spice-main) !important;
+}
+
+aside#Desktop_PanelContainer_Id svg[aria-label="now"] {
+  fill: var(--friend-online-color) !important;
+  filter: drop-shadow(0 0 3px var(--friend-online-color));
 }

@@ -50,3 +50,20 @@ fish_add_path /home/rayin/.opencode/bin
 # bun
 set --export BUN_INSTALL "$HOME/.bun"
 set --export PATH $BUN_INSTALL/bin $PATH
+
+# GitHub MCP auth
+test -f ~/.secrets.fish; and source ~/.secrets.fish  # secrets live outside this repo
+
+# MySQL/TiDB MCP (staging) - isi dari Headlamp secret (VPN dulu)
+set -gx MYSQL_HOST ""
+set -gx MYSQL_PORT "4000"
+set -gx MYSQL_USER ""
+set -gx MYSQL_PASS ""
+set -gx MYSQL_DB ""
+set -gx MYSQL_SSL "false"
+
+# >>> grok installer >>>
+fish_add_path $HOME/.grok/bin
+# <<< grok installer <<<
+
+fish_add_path /home/rayin/.spicetify
