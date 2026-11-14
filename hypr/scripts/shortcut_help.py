@@ -1,117 +1,101 @@
 #!/usr/bin/python3
 import sys
 import os
+import re
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
-KEYBINDS = [
-    # Workspaces
-    {"category": "Workspaces", "action": "Go to Workspace [1-10]", "keys": ["Super", "[1-0]"]},
-    {"category": "Workspaces", "action": "Go to Workspace Group [1-10]", "keys": ["Ctrl", "Super", "[1-0]"]},
-    {"category": "Workspaces", "action": "Next Workspace", "keys": ["Ctrl", "Super", "Right"]},
-    {"category": "Workspaces", "action": "Previous Workspace", "keys": ["Ctrl", "Super", "Left"]},
-    {"category": "Workspaces", "action": "Next Workspace (Alt)", "keys": ["Super", "Page_Down"]},
-    {"category": "Workspaces", "action": "Previous Workspace (Alt)", "keys": ["Super", "Page_Up"]},
-    {"category": "Workspaces", "action": "Scroll Next Workspace", "keys": ["Super", "Scroll Up"]},
-    {"category": "Workspaces", "action": "Scroll Prev Workspace", "keys": ["Super", "Scroll Down"]},
-    {"category": "Workspaces", "action": "Next Workspace Group", "keys": ["Ctrl", "Super", "Scroll Up"]},
-    {"category": "Workspaces", "action": "Prev Workspace Group", "keys": ["Ctrl", "Super", "Scroll Down"]},
-    {"category": "Workspaces", "action": "Toggle Special Workspace", "keys": ["Super", "S"]},
+import json
+import subprocess
 
-    # Window Placement
-    {"category": "Window Placement", "action": "Move Window to Workspace [1-10]", "keys": ["Super", "Alt", "[1-0]"]},
-    {"category": "Window Placement", "action": "Move Window to Group [1-10]", "keys": ["Ctrl", "Super", "Alt", "[1-0]"]},
-    {"category": "Window Placement", "action": "Move Window to Next Workspace", "keys": ["Ctrl", "Super", "Shift", "Right"]},
-    {"category": "Window Placement", "action": "Move Window to Prev Workspace", "keys": ["Ctrl", "Super", "Shift", "Left"]},
-    {"category": "Window Placement", "action": "Move Window to Next (Alt)", "keys": ["Super", "Alt", "Page_Down"]},
-    {"category": "Window Placement", "action": "Move Window to Prev (Alt)", "keys": ["Super", "Alt", "Page_Up"]},
-    {"category": "Window Placement", "action": "Move Window to Special Workspace", "keys": ["Ctrl", "Super", "Shift", "Up"]},
-    {"category": "Window Placement", "action": "Restore Window from Special Workspace", "keys": ["Ctrl", "Super", "Shift", "Down"]},
-    {"category": "Window Placement", "action": "Move Window to Special (Alt)", "keys": ["Super", "Alt", "S"]},
+# Hyprland 0.57+ is Lua-only: binds are read live from `hyprctl binds -j`.
+# Each bind's label is its `description` set in hyprland/keybinds.lua / hypr-user.lua;
+# binds without a description are hidden (internal helpers).
+MODS = [(64, "Super"), (4, "Ctrl"), (8, "Alt"), (1, "Shift")]
 
-    # Window Actions
-    {"category": "Window Actions", "action": "Close Active Window", "keys": ["Super", "Q"]},
-    {"category": "Window Actions", "action": "Toggle Floating Mode", "keys": ["Super", "Alt", "Space"]},
-    {"category": "Window Actions", "action": "Toggle Fullscreen", "keys": ["Super", "F"]},
-    {"category": "Window Actions", "action": "Toggle Fullscreen (Borders)", "keys": ["Super", "Alt", "F"]},
-    {"category": "Window Actions", "action": "Move Focus (Left/Right/Up/Down)", "keys": ["Super", "Arrow Keys"]},
-    {"category": "Window Actions", "action": "Swap Window Position", "keys": ["Super", "Shift", "Arrow Keys"]},
-    {"category": "Window Actions", "action": "Drag & Move Window", "keys": ["Super", "L-Click"]},
-    {"category": "Window Actions", "action": "Keyboard Move Window", "keys": ["Super", "Z"]},
-    {"category": "Window Actions", "action": "Drag & Resize Window", "keys": ["Super", "R-Click"]},
-    {"category": "Window Actions", "action": "Keyboard Resize Window", "keys": ["Super", "X"]},
-    {"category": "Window Actions", "action": "Resize Width (Left/Right)", "keys": ["Super", "- / ="]},
-    {"category": "Window Actions", "action": "Resize Height (Up/Down)", "keys": ["Super", "Shift", "- / ="]},
-    {"category": "Window Actions", "action": "Resize Fine-tuned", "keys": ["Super", "Alt", "Arrow Keys"]},
-    {"category": "Window Actions", "action": "Center Window", "keys": ["Ctrl", "Super", "\\"]},
-    {"category": "Window Actions", "action": "Center & Resize (55%x70%)", "keys": ["Ctrl", "Super", "Alt", "\\"]},
-    {"category": "Window Actions", "action": "Picture-in-Picture (PiP) Mode", "keys": ["Super", "Alt", "\\"]},
-    {"category": "Window Actions", "action": "Pin Window (All Workspaces)", "keys": ["Super", "P"]},
+def key_name(key):
+    return {
+        "mouse:272": "L-Click",
+        "mouse:273": "R-Click",
+        "mouse_up": "Scroll Up",
+        "mouse_down": "Scroll Down",
+        "slash": "/",
+        "period": ".",
+        "comma": ",",
+        "backslash": "\\",
+        "equal": "=",
+        "minus": "-",
+        "super_l": "Super",
+        "xf86audioraisevolume": "AudioRaiseVolume",
+        "xf86audiolowervolume": "AudioLowerVolume",
+        "xf86audiomute": "AudioMute",
+        "xf86audiomicmute": "AudioMicMute",
+        "xf86monbrightnessup": "BrightnessUp",
+        "xf86monbrightnessdown": "BrightnessDown",
+    }.get(key.lower(), key)
 
-    # Window Groups (Tabs)
-    {"category": "Window Groups (Tabs)", "action": "Toggle Tab Group", "keys": ["Super", ","]},
-    {"category": "Window Groups (Tabs)", "action": "Ungroup Active Window", "keys": ["Super", "Shift", "U"]},
-    {"category": "Window Groups (Tabs)", "action": "Cycle Tab Forward", "keys": ["Alt", "Tab"]},
-    {"category": "Window Groups (Tabs)", "action": "Cycle Tab Backward", "keys": ["Shift", "Alt", "Tab"]},
-    {"category": "Window Groups (Tabs)", "action": "Switch Active Group Tab Forward", "keys": ["Ctrl", "Alt", "Tab"]},
-    {"category": "Window Groups (Tabs)", "action": "Switch Active Group Tab Backward", "keys": ["Ctrl", "Shift", "Alt", "Tab"]},
-    {"category": "Window Groups (Tabs)", "action": "Lock Active Group Toggle", "keys": ["Super", "Shift", ","]},
+def key_tokens(modmask, key):
+    tokens = [name for bit, name in MODS if modmask & bit]
+    name = key_name(key)
+    if name not in tokens:
+        tokens.append(name)
+    return tokens
 
-    # Apps & Launchers
-    {"category": "Apps & Launchers", "action": "Open App Launcher Menu", "keys": ["Super"]},
-    {"category": "Apps & Launchers", "action": "Open Terminal (foot)", "keys": ["Super", "T"]},
-    {"category": "Apps & Launchers", "action": "Toggle Browser Overlay", "keys": ["Super", "B"]},
-    {"category": "Apps & Launchers", "action": "Open Editor (OpenCode)", "keys": ["Super", "C"]},
-    {"category": "Apps & Launchers", "action": "Open File Explorer (Dolphin)", "keys": ["Super", "E"]},
-    {"category": "Apps & Launchers", "action": "Open System Monitor Overlay", "keys": ["Ctrl", "Shift", "Escape"]},
-    {"category": "Apps & Launchers", "action": "Open Process Manager (qps)", "keys": ["Ctrl", "Alt", "Escape"]},
-    {"category": "Apps & Launchers", "action": "Open Volume Mixer (pavucontrol)", "keys": ["Ctrl", "Alt", "V"]},
-    {"category": "Apps & Launchers", "action": "Toggle Music Overlay", "keys": ["Super", "M"]},
-    {"category": "Apps & Launchers", "action": "Toggle Discord Overlay", "keys": ["Super", "D"]},
-    {"category": "Apps & Launchers", "action": "Toggle WhatsApp Overlay", "keys": ["Super", "W"]},
+def category_for(action):
+    text = action.lower()
+    if text.startswith("window group"):
+        return "Window Groups"
+    if "move window to" in text or "move window out" in text:
+        return "Window Placement"
+    if "workspace" in text and "overlay" not in text:
+        return "Workspaces"
+    if any(w in text for w in ["window", "fullscreen", "focus", "pin", "picture-in-picture"]):
+        return "Window Actions"
+    if any(w in text for w in ["open ", "launcher", "overlay"]):
+        return "Apps & Launchers"
+    if any(w in text for w in ["volume", "mute", "media", "brightness", "lock", "suspend", "shell", "session", "sidebar", "dashboard", "notification"]):
+        return "System & Media"
+    return "Utilities"
 
+def has_touchpad():
+    try:
+        with open("/proc/bus/input/devices") as f:
+            return "touchpad" in f.read().lower()
+    except OSError:
+        return False
 
-    # Utilities
-    {"category": "Utilities", "action": "Shortcut Help Menu", "keys": ["Super", "/"]},
-    {"category": "Utilities", "action": "Toggle Sidebar", "keys": ["Super", "N"]},
-    {"category": "Utilities", "action": "Toggle Dashboard Panels", "keys": ["Super", "K"]},
-    {"category": "Utilities", "action": "Clear Notifications", "keys": ["Ctrl", "Alt", "C"]},
-    {"category": "Utilities", "action": "Screenshot (Full Screen)", "keys": ["Print"]},
-    {"category": "Utilities", "action": "Screenshot (Freeze Selection)", "keys": ["Super", "Shift", "S"]},
-    {"category": "Utilities", "action": "Screenshot (Selection)", "keys": ["Super", "Shift", "Alt", "S"]},
-    {"category": "Utilities", "action": "Record Selection with Sound", "keys": ["Super", "Alt", "R"]},
-    {"category": "Utilities", "action": "Record Full Screen (Silent)", "keys": ["Ctrl", "Alt", "R"]},
-    {"category": "Utilities", "action": "Record Selection (Silent)", "keys": ["Super", "Shift", "Alt", "R"]},
-    {"category": "Utilities", "action": "Color Picker", "keys": ["Super", "Shift", "C"]},
-    {"category": "Utilities", "action": "Clipboard History Menu", "keys": ["Super", "V"]},
-    {"category": "Utilities", "action": "Clipboard Delete Item Menu", "keys": ["Super", "Alt", "V"]},
-    {"category": "Utilities", "action": "Emoji Picker", "keys": ["Super", "."]},
-    {"category": "Utilities", "action": "Autotype Last Copied Text", "keys": ["Ctrl", "Shift", "Alt", "V"]},
-
-    # System & Media
-    {"category": "System & Media", "action": "Volume Up (10%)", "keys": ["AudioRaiseVolume"]},
-    {"category": "System & Media", "action": "Volume Down (10%)", "keys": ["AudioLowerVolume"]},
-    {"category": "System & Media", "action": "Mute Speaker Toggle", "keys": ["AudioMute"]},
-    {"category": "System & Media", "action": "Mute Speaker Toggle (Alt)", "keys": ["Super", "Shift", "M"]},
-    {"category": "System & Media", "action": "Mute Mic Toggle", "keys": ["AudioMicMute"]},
-    {"category": "System & Media", "action": "Brightness Up / Down", "keys": ["MonBrightnessUp/Down"]},
-    {"category": "System & Media", "action": "Media Play / Pause", "keys": ["Ctrl", "Super", "Space"]},
-    {"category": "System & Media", "action": "Media Next Track", "keys": ["Ctrl", "Super", "="]},
-    {"category": "System & Media", "action": "Media Prev Track", "keys": ["Ctrl", "Super", "-"]},
-    {"category": "System & Media", "action": "Lock Screen", "keys": ["Super", "L"]},
-    {"category": "System & Media", "action": "Restore Lock Screen", "keys": ["Super", "Alt", "L"]},
-    {"category": "System & Media", "action": "Power / Session Menu", "keys": ["Ctrl", "Alt", "Delete"]},
-    {"category": "System & Media", "action": "Suspend & Hibernate", "keys": ["Super", "Shift", "L"]},
-    {"category": "System & Media", "action": "Kill Shell UI", "keys": ["Ctrl", "Super", "Shift", "R"]},
-    {"category": "System & Media", "action": "Restart Shell UI", "keys": ["Ctrl", "Super", "Alt", "R"]},
-
-    # Touchpad Gestures
-    {"category": "Touchpad Gestures (Laptops)", "action": "Switch Workspace", "keys": ["4-finger horizontal swipe"]},
-    {"category": "Touchpad Gestures (Laptops)", "action": "Open Special Workspace", "keys": ["3-finger swipe up"]},
-    {"category": "Touchpad Gestures (Laptops)", "action": "Close Special Workspace", "keys": ["3-finger swipe down"]},
-    {"category": "Touchpad Gestures (Laptops)", "action": "Suspend System", "keys": ["4-finger swipe down"]}
+# shortcut: mirrors hyprland/gestures.lua by hand; update both if gestures change.
+GESTURES = [
+    ("3-finger horizontal swipe", "Switch workspace"),
+    ("4-finger horizontal swipe", "Switch workspace"),
+    ("3-finger up swipe", "Close special workspace"),
+    ("3-finger down swipe", "Open special workspace"),
+    ("4-finger down swipe", "Suspend system"),
 ]
+
+def parse_keybinds():
+    try:
+        binds = json.loads(subprocess.check_output(["hyprctl", "binds", "-j"], text=True))
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as e:
+        print("Error reading binds:", e)
+        binds = []
+    rows, seen = [], set()
+    for b in binds:
+        action = (b.get("description") or "").strip()
+        if not action:
+            continue
+        item = {"category": category_for(action), "action": action, "keys": key_tokens(b.get("modmask", 0), b.get("key", ""))}
+        ident = (item["category"], item["action"], tuple(item["keys"]))
+        if ident not in seen:
+            seen.add(ident)
+            rows.append(item)
+    if has_touchpad():
+        rows.extend({"category": "Touchpad Gestures", "action": act, "keys": [keys]} for keys, act in GESTURES)
+    rows.sort(key=lambda item: (item["category"], item["action"], " ".join(item["keys"])))
+    return rows
+
+KEYBINDS = parse_keybinds()
 
 def load_colors():
     colors = {
@@ -127,17 +111,10 @@ def load_colors():
         "onSurface": "#e3e2e3"
     }
     try:
-        conf_path = os.path.expanduser("~/.config/hypr/scheme/current.conf")
-        if os.path.exists(conf_path):
-            with open(conf_path) as f:
-                for line in f:
-                    if "=" in line:
-                        k, v = line.strip().split("=", 1)
-                        k = k.strip().replace("$", "")
-                        v = v.strip()
-                        if not v.startswith("#"):
-                            v = "#" + v
-                        colors[k] = v
+        lua_path = os.path.expanduser("~/.config/hypr/scheme/current.lua")
+        with open(lua_path) as f:
+            for k, v in re.findall(r'^\s*(\w+)\s*=\s*"([0-9A-Fa-f]{6,8})"', f.read(), re.M):
+                colors[k] = "#" + v
     except Exception as e:
         print("Error loading colors:", e)
     return colors

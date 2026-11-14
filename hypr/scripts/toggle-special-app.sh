@@ -6,15 +6,15 @@ class_re="${2:?missing class regex}"
 shift 2
 
 case "$name" in
-    browser) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefade -25%" >/dev/null ;;
-    music) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefadevert -25%" >/dev/null ;;
-    whatsapp) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefade 25%" >/dev/null ;;
-    communication) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, slidefade -25%" >/dev/null ;;
-    github) hyprctl keyword animation "specialWorkspace, 1, 3, specialWorkSwitch, fade" >/dev/null ;;
+    browser) hyprctl eval 'hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "specialWorkSwitch", style = "slidefade -25%" })' >/dev/null ;;
+    music) hyprctl eval 'hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "specialWorkSwitch", style = "slidefadevert -25%" })' >/dev/null ;;
+    whatsapp) hyprctl eval 'hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "specialWorkSwitch", style = "slidefade 25%" })' >/dev/null ;;
+    communication) hyprctl eval 'hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "specialWorkSwitch", style = "slidefade -25%" })' >/dev/null ;;
+    github) hyprctl eval 'hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "specialWorkSwitch", style = "fade" })' >/dev/null ;;
 esac
 
 if hyprctl clients -j | jq -e --arg re "$class_re" 'any(.[]; (.class // "") | test($re; "i"))' >/dev/null; then
-    hyprctl dispatch togglespecialworkspace "$name" >/dev/null
+    hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$name\")" >/dev/null
 else
-    hyprctl dispatch exec "$*" >/dev/null
+    hyprctl dispatch "hl.dsp.exec_cmd([==[$*]==])" >/dev/null
 fi
